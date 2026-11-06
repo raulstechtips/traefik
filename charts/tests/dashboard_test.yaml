@@ -1,0 +1,40 @@
+suite: Traefik dashboard IngressRoute
+templates:
+  - templates/dashboard.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the live dashboard route shape
+    values:
+      - ../ci/all-on-values.yaml
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: metadata.name
+          value: traefik-dashboard
+      - equal:
+          path: metadata.namespace
+          value: traefik
+      - equal:
+          path: spec.routes[0].match
+          value: Host(`traefik.example.test`)
+      - equal:
+          path: spec.routes[0].middlewares
+          value:
+            - name: oauth-chain
+              namespace: default
+      - equal:
+          path: spec.routes[0].services
+          value:
+            - name: api@internal
+              kind: TraefikService
+      - equal:
+          path: spec.tls.secretName
+          value: fake-prod-tls

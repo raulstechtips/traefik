@@ -1,0 +1,79 @@
+{{- if .Values.middlewares.enabled }}
+{{- $namespace := required "middlewares.namespace is required when middlewares.enabled is true" .Values.middlewares.namespace }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: default-headers
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    forceSTSHeader: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 15552000
+    referrerPolicy: no-referrer
+    contentSecurityPolicy: {{ required "middlewares.defaultHeaders.contentSecurityPolicy is required when middlewares.enabled is true" .Values.middlewares.defaultHeaders.contentSecurityPolicy | quote }}
+    customFrameOptionsValue: SAMEORIGIN
+    customRequestHeaders:
+      X-Forwarded-Proto: https
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strict-referrer
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+spec:
+  headers:
+    referrerPolicy: {{ .Values.middlewares.strictReferrer.referrerPolicy | quote }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth-verify
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+spec:
+  forwardAuth:
+    address: {{ .Values.middlewares.oauth.verifyAddress | quote }}
+    trustForwardHeader: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth-signin
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+spec:
+  errors:
+    status:
+      - "401-403"
+    service:
+      name: {{ .Values.middlewares.oauth.signIn.serviceName }}
+      namespace: {{ .Values.middlewares.oauth.signIn.serviceNamespace }}
+      port: {{ .Values.middlewares.oauth.signIn.servicePort }}
+    query: {{ .Values.middlewares.oauth.signIn.query | quote }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: oauth-chain
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+spec:
+  chain:
+    middlewares:
+      - name: oauth-signin
+        namespace: {{ $namespace }}
+      - name: oauth-verify
+        namespace: {{ $namespace }}
+{{- end }}

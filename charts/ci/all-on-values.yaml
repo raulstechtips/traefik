@@ -1,0 +1,37 @@
+# Every wrapper feature on, with dummy non-secret strings. Used by helm lint, kubeconform and unit tests.
+dashboard:
+  enabled: true
+  host: traefik.example.test
+  tlsSecretName: fake-prod-tls
+  middlewares:
+    - name: oauth-chain
+      namespace: default
+middlewares:
+  enabled: true
+  defaultHeaders:
+    contentSecurityPolicy: "default-src 'none';"
+externalServices:
+  - name: example
+    namespace: default
+    serviceName: example-service
+    ingressRouteName: example-ingress
+    ingressClass: traefik-external
+    entryPoints:
+      - websecure
+    host: example.example.test
+    tlsSecretName: fake-prod-tls
+    port: 8443
+    targetPort: 8443
+    endpointIP: 192.0.2.20
+    scheme: https
+    middlewares:
+      - name: example-prefix
+        spec:
+          addPrefix:
+            prefix: /example
+      - name: default-headers
+        namespace: default
+traefik:
+  service:
+    spec:
+      loadBalancerIP: 192.0.2.30

@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dashboard", "middlewares", "externalServices", "traefik"],
+  "definitions": {
+    "middlewareReferences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "namespace": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "externalServiceMiddlewares": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+          "namespace": { "type": "string", "minLength": 1 },
+          "spec": { "type": "object", "minProperties": 1 }
+        }
+      }
+    }
+  },
+  "properties": {
+    "dashboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "entryPoints", "ingressClass", "host", "tlsSecretName", "middlewares"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "entryPoints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "ingressClass": { "type": "string", "minLength": 1 },
+        "host": { "type": "string" },
+        "tlsSecretName": { "type": "string" },
+        "middlewares": { "$ref": "#/definitions/middlewareReferences" }
+      }
+    },
+    "middlewares": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "namespace", "defaultHeaders", "strictReferrer", "oauth"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string" },
+        "defaultHeaders": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contentSecurityPolicy"],
+          "properties": {
+            "contentSecurityPolicy": { "type": "string" }
+          }
+        },
+        "strictReferrer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["referrerPolicy"],
+          "properties": {
+            "referrerPolicy": { "type": "string", "minLength": 1 }
+          }
+        },
+        "oauth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["verifyAddress", "signIn"],
+          "properties": {
+            "verifyAddress": { "type": "string", "minLength": 1 },
+            "signIn": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["serviceName", "serviceNamespace", "servicePort", "query"],
+              "properties": {
+                "serviceName": { "type": "string", "minLength": 1 },
+                "serviceNamespace": { "type": "string", "minLength": 1 },
+                "servicePort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+                "query": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "externalServices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "namespace",
+          "serviceName",
+          "ingressRouteName",
+          "ingressClass",
+          "entryPoints",
+          "host",
+          "tlsSecretName",
+          "port",
+          "targetPort",
+          "middlewares"
+        ],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+          "namespace": { "type": "string", "minLength": 1 },
+          "serviceName": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+          "ingressRouteName": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+          "ingressClass": { "type": "string", "minLength": 1 },
+          "entryPoints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "host": { "type": "string", "minLength": 1 },
+          "tlsSecretName": { "type": "string", "minLength": 1 },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "targetPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "endpointIP": { "type": "string", "minLength": 1 },
+          "scheme": { "type": "string", "enum": ["http", "https"] },
+          "middlewares": { "$ref": "#/definitions/externalServiceMiddlewares" }
+        }
+      }
+    },
+    "traefik": { "type": "object" }
+  }
+}

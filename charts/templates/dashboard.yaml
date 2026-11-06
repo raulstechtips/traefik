@@ -1,0 +1,26 @@
+{{- if .Values.dashboard.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.dashboard.ingressClass | quote }}
+spec:
+  entryPoints:
+    {{- toYaml .Values.dashboard.entryPoints | nindent 4 }}
+  routes:
+    - match: {{ printf "Host(`%s`)" (required "dashboard.host is required when dashboard.enabled is true" .Values.dashboard.host) | quote }}
+      kind: Rule
+      {{- with .Values.dashboard.middlewares }}
+      middlewares:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      services:
+        - name: api@internal
+          kind: TraefikService
+  tls:
+    secretName: {{ required "dashboard.tlsSecretName is required when dashboard.enabled is true" .Values.dashboard.tlsSecretName | quote }}
+{{- end }}

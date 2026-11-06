@@ -1,0 +1,11 @@
+project-config:
+  project-name: traefik
+  project-description: "Helm chart that installs Traefik and its shared routing resources"
+  project-namespace: traefik
+  publish-targets: [ghcr]
+  pipeline-steps:
+    helm-test: true
+    trivy-scan: true
+    opengrep-scan: true
+    helm-package-upload: true
+    argo-deploy: true

@@ -1,0 +1,106 @@
+suite: External services
+templates:
+  - templates/external-services.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders Service Endpoints Middleware and IngressRoute
+    values:
+      - ../ci/all-on-values.yaml
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: renders the external Service
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: example-service
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8443
+
+  - it: renders the static endpoint
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: Endpoints
+      - equal:
+          path: subsets[0].addresses[0].ip
+          value: 192.0.2.20
+
+  - it: creates a Middleware for a route item with a spec
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 2
+    asserts:
+      - isKind:
+          of: Middleware
+      - equal:
+          path: metadata.name
+          value: example-prefix
+      - equal:
+          path: spec.addPrefix.prefix
+          value: /example
+
+  - it: keeps the route middleware order and renders references only
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 3
+    asserts:
+      - equal:
+          path: spec.routes[0].middlewares
+          value:
+            - name: example-prefix
+            - name: default-headers
+              namespace: default
+
+  - it: creates no Middleware for reference-only items
+    set:
+      externalServices:
+        - name: plain
+          namespace: default
+          serviceName: plain-service
+          ingressRouteName: plain-ingress
+          ingressClass: traefik-external
+          entryPoints: [websecure]
+          host: plain.example.test
+          tlsSecretName: fake-prod-tls
+          port: 80
+          targetPort: 80
+          middlewares:
+            - name: default-headers
+              namespace: default
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isKind:
+          of: IngressRoute
+        documentIndex: 1
+
+  - it: routes to the Service with the requested scheme
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 3
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: spec.routes[0].services[0]
+          value:
+            name: example-service
+            port: 8443
+            scheme: https

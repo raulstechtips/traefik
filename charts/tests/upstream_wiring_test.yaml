@@ -1,0 +1,80 @@
+suite: Upstream Traefik wiring with chart defaults
+templates:
+  - charts/traefik/templates/deployment.yaml
+  - charts/traefik/templates/service.yaml
+  - charts/traefik/templates/ingressclass.yaml
+  - charts/traefik/templates/ingressroute.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: keeps the live Deployment name image and replicas
+    template: charts/traefik/templates/deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: traefik
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/traefik:v3.3.6
+
+  - it: keeps the live CRD provider wiring
+    template: charts/traefik/templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --providers.kubernetescrd.ingressClass=traefik-external
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --providers.kubernetescrd.allowCrossNamespace=true
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --entryPoints.websecure.http3
+
+  - it: keeps the LoadBalancer Service and TCP entry points
+    template: charts/traefik/templates/service.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: traefik
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - equal:
+          path: spec.externalTrafficPolicy
+          value: Local
+      - contains:
+          path: spec.ports
+          content:
+            name: postgres
+            port: 5432
+            protocol: TCP
+            targetPort: postgres
+      - contains:
+          path: spec.ports
+          content:
+            name: redis
+            port: 6379
+            protocol: TCP
+            targetPort: redis
+
+  - it: keeps Traefik as the default IngressClass
+    template: charts/traefik/templates/ingressclass.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: traefik
+      - equal:
+          path: metadata.annotations["ingressclass.kubernetes.io/is-default-class"]
+          value: "true"
+
+  - it: disables the upstream dashboard route
+    template: charts/traefik/templates/ingressroute.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
