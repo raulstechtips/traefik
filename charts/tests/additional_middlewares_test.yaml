@@ -1,0 +1,42 @@
+suite: Additional Traefik middlewares
+templates:
+  - templates/additional-middlewares.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the configured name namespace and exact spec
+    values:
+      - ../ci/all-on-values.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Middleware
+      - equal:
+          path: metadata.name
+          value: legacy-example
+      - equal:
+          path: metadata.namespace
+          value: traefik
+      - equal:
+          path: spec
+          value:
+            headers:
+              referrerPolicy: same-origin
+
+  - it: adds wrapper labels
+    values:
+      - ../ci/all-on-values.yaml
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: traefik
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: traefik

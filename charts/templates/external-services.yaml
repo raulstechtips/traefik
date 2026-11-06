@@ -1,0 +1,96 @@
+{{- range .Values.externalServices }}
+{{- $service := . }}
+{{- $namespace := required "externalServices[].namespace is required" .namespace }}
+{{- $serviceName := required "externalServices[].serviceName is required" .serviceName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: TCP
+      name: http
+{{- with .endpointIP }}
+---
+{{- if semverCompare ">=1.33-0" $.Capabilities.KubeVersion.Version }}
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: {{ $serviceName }}-static
+  namespace: {{ $namespace }}
+  labels:
+    kubernetes.io/service-name: {{ $serviceName }}
+    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
+addressType: IPv4
+endpoints:
+  - addresses:
+      - {{ . | quote }}
+ports:
+  - name: http
+    port: {{ $service.port }}
+    protocol: TCP
+{{- else }}
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: {{ $serviceName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
+subsets:
+  - addresses:
+      - ip: {{ . }}
+    ports:
+      - port: {{ $service.port }}
+        name: http
+        protocol: TCP
+{{- end }}
+{{- end }}
+{{- range .extraMiddlewares }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ .name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
+spec:
+  {{- toYaml .spec | nindent 2 }}
+{{- end }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .ingressRouteName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .ingressClass | quote }}
+spec:
+  entryPoints:
+    {{- toYaml .entryPoints | nindent 4 }}
+  routes:
+    - match: {{ printf "Host(`%s`)" .host | quote }}
+      kind: Rule
+      {{- with .middlewares }}
+      middlewares:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      services:
+        - name: {{ $serviceName }}
+          port: {{ .port }}
+          {{- with .scheme }}
+          scheme: {{ . }}
+          {{- end }}
+  tls:
+    secretName: {{ .tlsSecretName | quote }}
+{{- end }}

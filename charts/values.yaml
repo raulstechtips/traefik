@@ -1,0 +1,133 @@
+# Wrapper chart defaults. Environment values (hosts, IPs, TLS Secrets) live in cluster-config.
+# This file is not templated. YAML anchors only work within one file.
+
+dashboard:
+  # true -> render the secured Traefik dashboard IngressRoute.
+  enabled: false
+  entryPoints:
+    - websecure
+  ingressClass: traefik-external
+  host: ""
+  tlsSecretName: ""
+  middlewares: []
+
+middlewares:
+  # true -> manage the shared middleware set in one namespace.
+  enabled: false
+  # Routes across the cluster normally reference these objects in default.
+  namespace: default
+  defaultHeaders:
+    contentSecurityPolicy: ""
+  strictReferrer:
+    referrerPolicy: strict-origin-when-cross-origin
+  oauth:
+    verifyAddress: http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/auth
+    signIn:
+      serviceName: oauth2-proxy
+      serviceNamespace: oauth2-proxy
+      servicePort: 80
+      query: /oauth2/sign_in?rd={url}
+  vpnIpAcl:
+    sourceRange: []
+
+# Additional Middleware objects that must keep an exact namespace-specific specification.
+additionalMiddlewares: []
+
+# External endpoints represented by a Service, optional Endpoints, optional Middlewares, and IngressRoute.
+externalServices: []
+
+# Values passed to the upstream Traefik dependency (used as-is, never forked).
+# Only keys that differ from the upstream 35.2.0 defaults are listed.
+traefik:
+  additionalArguments:
+    - --serversTransport.insecureSkipVerify=true
+    # These duplicate the generated entry-point arguments in the live Deployment. Keep them for adoption parity.
+    - --entryPoints.redis.address=:6379/tcp
+    - --entryPoints.postgres.address=:5432/tcp
+    - --entryPoints.websecure.transport.respondingTimeouts.readTimeout=0
+    - --entryPoints.websecure.transport.respondingTimeouts.writeTimeout=0
+    - --entryPoints.websecure.transport.respondingTimeouts.idleTimeout=300s
+    - --serversTransport.forwardingTimeouts.dialTimeout=30s
+    - --serversTransport.forwardingTimeouts.responseHeaderTimeout=300s
+    - --serversTransport.forwardingTimeouts.idleConnTimeout=300s
+  deployment:
+    replicas: 3
+  globalArguments:
+    - --global.sendanonymoususage=false
+    - --global.checknewversion=false
+  ingressRoute:
+    dashboard:
+      enabled: false
+  ports:
+    postgres:
+      expose:
+        default: true
+      exposedPort: 5432
+      port: 5432
+      protocol: TCP
+      tls:
+        enabled: true
+    redis:
+      expose:
+        default: true
+      exposedPort: 6379
+      port: 6379
+      protocol: TCP
+      tls:
+        enabled: false
+    websecure:
+      http3:
+        enabled: true
+      tls:
+        enabled: true
+      forwardedHeaders:
+        trustedIPs:
+          - 173.245.48.0/20
+          - 103.21.244.0/22
+          - 103.22.200.0/22
+          - 103.31.4.0/22
+          - 141.101.64.0/18
+          - 108.162.192.0/18
+          - 190.93.240.0/20
+          - 188.114.96.0/20
+          - 197.234.240.0/22
+          - 198.41.128.0/17
+          - 162.158.0.0/15
+          - 104.16.0.0/13
+          - 104.24.0.0/14
+          - 172.64.0.0/13
+          - 131.0.72.0/22
+          - 2400:cb00::/32
+          - 2606:4700::/32
+          - 2803:f800::/32
+          - 2405:b500::/32
+          - 2405:8100::/32
+          - 2a06:98c0::/29
+          - 2c0f:f248::/32
+  providers:
+    kubernetesCRD:
+      allowCrossNamespace: true
+      allowExternalNameServices: true
+      ingressClass: traefik-external
+    kubernetesIngress:
+      allowExternalNameServices: true
+      publishedService:
+        enabled: false
+  logs:
+    access:
+      enabled: true
+      format: json
+      fields:
+        general:
+          names:
+            StartUTC: keep
+            ClientAddr: keep
+        headers:
+          names:
+            X-Forwarded-For: keep
+            CF-Connecting-IP: keep
+            User-Agent: keep
+            Host: keep
+  service:
+    spec:
+      externalTrafficPolicy: Local

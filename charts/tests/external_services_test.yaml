@@ -1,0 +1,71 @@
+suite: External services
+templates:
+  - templates/external-services.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders Service Endpoints Middleware and IngressRoute
+    values:
+      - ../ci/all-on-values.yaml
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: renders the external Service
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: example-service
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8443
+
+  - it: renders the static endpoint
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: Endpoints
+      - equal:
+          path: subsets[0].addresses[0].ip
+          value: 192.0.2.20
+
+  - it: renders optional middleware objects
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 2
+    asserts:
+      - isKind:
+          of: Middleware
+      - equal:
+          path: metadata.name
+          value: example-prefix
+      - equal:
+          path: spec.addPrefix.prefix
+          value: /example
+
+  - it: routes to the Service with the requested scheme
+    values:
+      - ../ci/all-on-values.yaml
+    documentIndex: 3
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: spec.routes[0].services[0]
+          value:
+            name: example-service
+            port: 8443
+            scheme: https

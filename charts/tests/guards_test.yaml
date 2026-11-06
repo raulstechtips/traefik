@@ -1,0 +1,70 @@
+suite: Render guards and values schema
+templates:
+  - templates/dashboard.yaml
+  - templates/middlewares.yaml
+  - templates/external-services.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: fails when dashboard is on without a host
+    template: templates/dashboard.yaml
+    values:
+      - ../ci/all-on-values.yaml
+    set:
+      dashboard.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: dashboard.host is required when dashboard.enabled is true
+
+  - it: fails when middleware management has no namespace
+    template: templates/middlewares.yaml
+    values:
+      - ../ci/all-on-values.yaml
+    set:
+      middlewares.namespace: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: middlewares.namespace is required when middlewares.enabled is true
+
+  - it: fails when middleware management has no CSP
+    template: templates/middlewares.yaml
+    values:
+      - ../ci/all-on-values.yaml
+    set:
+      middlewares.defaultHeaders.contentSecurityPolicy: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: middlewares.defaultHeaders.contentSecurityPolicy is required when middlewares.enabled is true
+
+  - it: rejects a quoted dashboard boolean
+    template: templates/dashboard.yaml
+    set:
+      dashboard.enabled: "true"
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            traefik:
+            - dashboard.enabled: Invalid type. Expected: boolean, given: string
+
+  - it: rejects an unknown middleware key
+    template: templates/middlewares.yaml
+    set:
+      middlewares.foo: x
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            traefik:
+            - middlewares: Additional property foo is not allowed
+
+  - it: leaves upstream values open
+    template: templates/dashboard.yaml
+    values:
+      - ../ci/all-on-values.yaml
+    set:
+      traefik.anyUpstreamKey: x
+    asserts:
+      - hasDocuments:
+          count: 1
