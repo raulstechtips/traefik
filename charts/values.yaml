@@ -80,6 +80,7 @@ traefik:
         enabled: true
       tls:
         enabled: true
+      # public: Cloudflare edge ranges, refreshed by .github/workflows/cloudflare-ips.yaml
       forwardedHeaders:
         trustedIPs:
           - 173.245.48.0/20

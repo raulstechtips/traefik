@@ -46,6 +46,23 @@ These must already exist:
 
 Any `traefik.*` key goes straight to the upstream chart.
 
+## Weekly Cloudflare IP ranges
+
+Traefik trusts the `X-Forwarded-*` headers on `websecure` only from the Cloudflare edge (`traefik.ports.websecure.forwardedHeaders.trustedIPs`). This is an entrypoint setting, so a Middleware cannot hold it.
+
+The `cloudflare-ips` GitHub Actions workflow (`.github/workflows/cloudflare-ips.yaml`, script `scripts/cloudflare-ips.sh`) runs each Monday:
+
+1. It reads `https://api.cloudflare.com/client/v4/ips`.
+2. If the response has no valid IPv4 or IPv6 list, the job fails and changes nothing.
+3. If the list is the same as `trustedIPs`, the job stops.
+4. If the list is different, the job replaces only the list lines, pushes a `bugfix/DEVSECOPS-60-cloudflare-ip-ranges-<date>` branch and opens a PR. Jenkins builds the branch from the push webhook.
+
+A new list changes the Traefik container arguments. After you merge and sync, the Traefik pods restart one at a time.
+
+To test without changes, start the workflow manually with `dry_run` set. Offline test: `IPS_FILE=<json> DRY_RUN=1 scripts/cloudflare-ips.sh`.
+
+One-time repository setting: **Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests**.
+
 ## Upgrades
 
 1. Set the new dependency version in `charts/Chart.yaml`.

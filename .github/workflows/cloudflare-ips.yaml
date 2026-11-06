@@ -1,0 +1,44 @@
+name: cloudflare-ips
+
+# Weekly: keep traefik.ports.websecure.forwardedHeaders.trustedIPs equal to api.cloudflare.com/client/v4/ips.
+on:
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only print the diff and the commands, change nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cloudflare-ips
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Install yq
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/yq" \
+            https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_amd64
+          echo "654d2943ca1d3be2024089eb4f270f4070f491a0610481d128509b2834870049  $RUNNER_TEMP/yq" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/yq"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Compare the Cloudflare ranges and open a PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run == true && '1' || '0' }}
+          CLOUDFLARE_TICKET_KEY: ${{ vars.CLOUDFLARE_TICKET_KEY || 'DEVSECOPS-60' }}
+        run: bash scripts/cloudflare-ips.sh
