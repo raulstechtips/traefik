@@ -53,7 +53,11 @@ subsets:
         protocol: TCP
 {{- end }}
 {{- end }}
-{{- range .extraMiddlewares }}
+{{- range .middlewares }}
+{{- if .spec }}
+{{- if and .namespace (ne .namespace $namespace) }}
+{{- fail (printf "externalServices[].middlewares[] %s has a spec, so its namespace must be %s or unset" .name $namespace) }}
+{{- end }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -64,6 +68,7 @@ metadata:
     {{- include "traefik-wrapper.labels" $ | nindent 4 }}
 spec:
   {{- toYaml .spec | nindent 2 }}
+{{- end }}
 {{- end }}
 ---
 apiVersion: traefik.io/v1alpha1
@@ -83,7 +88,12 @@ spec:
       kind: Rule
       {{- with .middlewares }}
       middlewares:
-        {{- toYaml . | nindent 8 }}
+        {{- range . }}
+        - name: {{ .name }}
+          {{- with .namespace }}
+          namespace: {{ . }}
+          {{- end }}
+        {{- end }}
       {{- end }}
       services:
         - name: {{ $serviceName }}

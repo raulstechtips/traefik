@@ -37,6 +37,53 @@ tests:
       - failedTemplate:
           errorMessage: middlewares.defaultHeaders.contentSecurityPolicy is required when middlewares.enabled is true
 
+  - it: fails when an inline route middleware names another namespace
+    template: templates/external-services.yaml
+    set:
+      externalServices:
+        - name: example
+          namespace: default
+          serviceName: example-service
+          ingressRouteName: example-ingress
+          ingressClass: traefik-external
+          entryPoints: [websecure]
+          host: example.example.test
+          tlsSecretName: fake-prod-tls
+          port: 80
+          targetPort: 80
+          middlewares:
+            - name: example-prefix
+              namespace: traefik
+              spec:
+                addPrefix:
+                  prefix: /example
+    asserts:
+      - failedTemplate:
+          errorMessage: externalServices[].middlewares[] example-prefix has a spec, so its namespace must be default or unset
+
+  - it: rejects the removed extraMiddlewares key
+    template: templates/external-services.yaml
+    set:
+      externalServices:
+        - name: example
+          namespace: default
+          serviceName: example-service
+          ingressRouteName: example-ingress
+          ingressClass: traefik-external
+          entryPoints: [websecure]
+          host: example.example.test
+          tlsSecretName: fake-prod-tls
+          port: 80
+          targetPort: 80
+          middlewares: []
+          extraMiddlewares: []
+    asserts:
+      - failedTemplate:
+          errorMessage: |
+            values don't meet the specifications of the schema(s) in the following chart(s):
+            traefik:
+            - externalServices.0: Additional property extraMiddlewares is not allowed
+
   - it: rejects a quoted dashboard boolean
     template: templates/dashboard.yaml
     set:

@@ -76,18 +76,4 @@ spec:
         namespace: {{ $namespace }}
       - name: oauth-verify
         namespace: {{ $namespace }}
-{{- with .Values.middlewares.vpnIpAcl.sourceRange }}
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: vpn-ip-acl
-  namespace: {{ $namespace }}
-  labels:
-    {{- include "traefik-wrapper.labels" $ | nindent 4 }}
-spec:
-  ipAllowList:
-    sourceRange:
-      {{- toYaml . | nindent 6 }}
-{{- end }}
 {{- end }}

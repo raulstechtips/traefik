@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["dashboard", "middlewares", "additionalMiddlewares", "externalServices", "traefik"],
+  "required": ["dashboard", "middlewares", "externalServices", "traefik"],
   "definitions": {
     "middlewareReferences": {
       "type": "array",
@@ -13,6 +13,19 @@
         "properties": {
           "name": { "type": "string", "minLength": 1 },
           "namespace": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "externalServiceMiddlewares": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+          "namespace": { "type": "string", "minLength": 1 },
+          "spec": { "type": "object", "minProperties": 1 }
         }
       }
     }
@@ -34,7 +47,7 @@
     "middlewares": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "namespace", "defaultHeaders", "strictReferrer", "oauth", "vpnIpAcl"],
+      "required": ["enabled", "namespace", "defaultHeaders", "strictReferrer", "oauth"],
       "properties": {
         "enabled": { "type": "boolean" },
         "namespace": { "type": "string" },
@@ -72,30 +85,6 @@
               }
             }
           }
-        },
-        "vpnIpAcl": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["sourceRange"],
-          "properties": {
-            "sourceRange": {
-              "type": "array",
-              "items": { "type": "string", "minLength": 1 }
-            }
-          }
-        }
-      }
-    },
-    "additionalMiddlewares": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["name", "namespace", "spec"],
-        "properties": {
-          "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
-          "namespace": { "type": "string", "minLength": 1 },
-          "spec": { "type": "object" }
         }
       }
     },
@@ -115,8 +104,7 @@
           "tlsSecretName",
           "port",
           "targetPort",
-          "middlewares",
-          "extraMiddlewares"
+          "middlewares"
         ],
         "properties": {
           "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
@@ -131,19 +119,7 @@
           "targetPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
           "endpointIP": { "type": "string", "minLength": 1 },
           "scheme": { "type": "string", "enum": ["http", "https"] },
-          "middlewares": { "$ref": "#/definitions/middlewareReferences" },
-          "extraMiddlewares": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["name", "spec"],
-              "properties": {
-                "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
-                "spec": { "type": "object", "minProperties": 1 }
-              }
-            }
-          }
+          "middlewares": { "$ref": "#/definitions/externalServiceMiddlewares" }
         }
       }
     },

@@ -27,13 +27,9 @@ middlewares:
       serviceNamespace: oauth2-proxy
       servicePort: 80
       query: /oauth2/sign_in?rd={url}
-  vpnIpAcl:
-    sourceRange: []
 
-# Additional Middleware objects that must keep an exact namespace-specific specification.
-additionalMiddlewares: []
-
-# External endpoints represented by a Service, optional Endpoints, optional Middlewares, and IngressRoute.
+# External endpoints represented by a Service, optional Endpoints, and an IngressRoute.
+# middlewares[] is the ordered route list. An item with spec also creates that Middleware in the entry namespace.
 externalServices: []
 
 # Values passed to the upstream Traefik dependency (used as-is, never forked).

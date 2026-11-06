@@ -10,18 +10,9 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: renders all six shared middlewares
+  - it: renders all five shared middlewares
     values:
       - ../ci/all-on-values.yaml
-    asserts:
-      - hasDocuments:
-          count: 6
-
-  - it: omits the VPN middleware when no ranges are configured
-    values:
-      - ../ci/all-on-values.yaml
-    set:
-      middlewares.vpnIpAcl.sourceRange: []
     asserts:
       - hasDocuments:
           count: 5
@@ -52,14 +43,3 @@ tests:
       - equal:
           path: spec.forwardAuth.address
           value: http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/auth
-
-  - it: renders the VPN ranges
-    values:
-      - ../ci/all-on-values.yaml
-    documentIndex: 5
-    asserts:
-      - equal:
-          path: spec.ipAllowList.sourceRange
-          value:
-            - 192.0.2.10/32
-            - 10.0.0.0/8
