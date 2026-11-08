@@ -2,7 +2,7 @@ apiVersion: v2
 name: traefik
 description: "Traefik wrapper chart: upstream Traefik plus the dashboard, shared middlewares, and external services."
 type: application
-version: 0.1.0-main-ecfb062-3
+version: 0.1.0
 appVersion: "3.3.6"
 dependencies:
   - name: traefik
