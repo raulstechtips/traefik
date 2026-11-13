@@ -70,20 +70,9 @@
         "oauth": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["verifyAddress", "signIn"],
+          "required": ["verifyAddress"],
           "properties": {
-            "verifyAddress": { "type": "string", "minLength": 1 },
-            "signIn": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["serviceName", "serviceNamespace", "servicePort", "query"],
-              "properties": {
-                "serviceName": { "type": "string", "minLength": 1 },
-                "serviceNamespace": { "type": "string", "minLength": 1 },
-                "servicePort": { "type": "integer", "minimum": 1, "maximum": 65535 },
-                "query": { "type": "string", "minLength": 1 }
-              }
-            }
+            "verifyAddress": { "type": "string", "minLength": 1 }
           }
         }
       }
