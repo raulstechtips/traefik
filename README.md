@@ -27,15 +27,6 @@ These must already exist:
 
 Runtime dependency (not an install prerequisite): `oauth-signin` and `oauth-verify` call the `oauth2-proxy` Service in `middlewares.oauth.signIn.serviceNamespace`. Without it, Traefik installs and runs, but the routes that use `oauth-chain` (the dashboard and Longhorn) do not work until oauth2-proxy is ready. Traefik picks up the Service automatically when it appears.
 
-## Rights for namespace admins
-
-The chart always creates the ClusterRole `<release>-aggregate-to-admin` with the label
-`rbac.authorization.k8s.io/aggregate-to-admin: "true"`. Kubernetes adds its rules to the built-in
-`admin` ClusterRole. Every RoleBinding to `admin` then gets full rights on the namespaced `traefik.io`
-resources in its own namespace. For example, the Jenkins `deployNamespaces` bindings let
-`jenkins-deployer` install a chart with an IngressRoute or a Middleware. The upstream
-`rbac.aggregateTo` value is not used: it labels the Traefik controller role, which only reads.
-
 ## Values reference
 
 | Key | Default | Meaning |
