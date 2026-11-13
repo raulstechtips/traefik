@@ -1,0 +1,35 @@
+suite: Traefik rights for namespace admins
+templates:
+  - templates/admin-aggregate-clusterrole.yaml
+release:
+  name: traefik
+  namespace: traefik
+tests:
+  - it: is rendered with default values and aggregates to admin
+    asserts:
+      - isKind:
+          of: ClusterRole
+      - equal:
+          path: metadata.name
+          value: traefik-aggregate-to-admin
+      - equal:
+          path: metadata.labels["rbac.authorization.k8s.io/aggregate-to-admin"]
+          value: "true"
+  - it: grants full rights on the namespaced Traefik resources only
+    asserts:
+      - equal:
+          path: rules
+          value:
+            - apiGroups: [traefik.io]
+              resources:
+                - ingressroutes
+                - ingressroutetcps
+                - ingressrouteudps
+                - middlewares
+                - middlewaretcps
+                - serverstransports
+                - serverstransporttcps
+                - tlsoptions
+                - tlsstores
+                - traefikservices
+              verbs: [get, list, watch, create, update, patch, delete, deletecollection]
