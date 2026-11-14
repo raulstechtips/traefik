@@ -10,7 +10,7 @@ The dependency comes directly from `https://traefik.github.io/charts`.
 The wrapper owns:
 
 - The secured `traefik-dashboard` IngressRoute.
-- The shared `default-headers`, `strict-referrer`, `oauth-verify`, `oauth-signin`, and `oauth-chain` Middlewares.
+- The shared `default-headers`, `strict-referrer`, `oauth-verify`, and `oauth-chain` Middlewares.
 - External endpoint definitions. Each `externalServices` entry creates a Service, an optional Endpoints object, optional extra Middlewares, and one IngressRoute.
 
 Everything else (Deployment, Service, ServiceAccount, RBAC, and IngressClass) comes from the upstream chart.
@@ -25,7 +25,7 @@ These must already exist:
 - The Traefik CRDs, only when the Argo CD Application sets `helm.skipCrds: true`. The dev Application sets it because the dev cluster had the CRDs before Argo CD managed Traefik. On a new cluster, leave `skipCrds` unset so that Argo CD installs the CRDs from the chart.
 - The TLS Secrets named by `dashboard.tlsSecretName` and each `externalServices[].tlsSecretName`.
 
-Runtime dependency (not an install prerequisite): `oauth-signin` and `oauth-verify` call the `oauth2-proxy` Service in `middlewares.oauth.signIn.serviceNamespace`. Without it, Traefik installs and runs, but the routes that use `oauth-chain` (the dashboard and Longhorn) do not work until oauth2-proxy is ready. Traefik picks up the Service automatically when it appears.
+Runtime dependency (not an install prerequisite): `oauth-verify` calls the `oauth2-proxy` Service at `middlewares.oauth.verifyAddress`. Without it, Traefik installs and runs, but the routes that use `oauth-chain` (the dashboard and Longhorn) do not work until oauth2-proxy is ready. Traefik picks up the Service automatically when it appears.
 
 ## Values reference
 
@@ -35,14 +35,24 @@ Runtime dependency (not an install prerequisite): `oauth-signin` and `oauth-veri
 | `dashboard.host` | `""` | Dashboard host. Required when enabled. |
 | `dashboard.tlsSecretName` | `""` | Dashboard TLS Secret. Required when enabled. |
 | `dashboard.middlewares` | `[]` | Middleware references used by the dashboard route. |
-| `middlewares.enabled` | `false` | `true` manages the five shared Middlewares. |
+| `middlewares.enabled` | `false` | `true` manages the four shared Middlewares. |
 | `middlewares.namespace` | `default` | Namespace for all shared Middlewares. |
 | `middlewares.defaultHeaders.contentSecurityPolicy` | `""` | CSP copied from the live middleware used by cluster routes. |
+| `middlewares.oauth.verifyAddress` | `http://oauth2-proxy.oauth2-proxy.svc.cluster.local/` | ForwardAuth address of `oauth-verify`. Use the oauth2-proxy root, not `/oauth2/auth`. See [Login redirect](#login-redirect). |
 | `externalServices` | `[]` | External Service, Endpoints, middleware, and route definitions. |
 | `externalServices[].endpointIP` | omitted | When set, creates an Endpoints object. When omitted, only the Service and route are created. |
 | `externalServices[].middlewares` | required | The ordered Middleware list of the route. An item with only `name` (and optional `namespace`) is a reference. An item with `spec` also creates that Middleware in the entry namespace (`namespace` must then be unset or the same). |
 
 Any `traefik.*` key goes straight to the upstream chart.
+
+## Login redirect
+
+`oauth-chain` contains only `oauth-verify`. `oauth-verify` sends ForwardAuth to the oauth2-proxy root path. oauth2-proxy runs with `upstreams = ["static://200"]`, `reverse-proxy` and `skip-provider-button`, so:
+
+- A logged-in request gets `200`, and Traefik sends it to the app.
+- A request that is not logged in gets a `302` to Keycloak. oauth2-proxy builds the return URL from `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Uri`, so after login the browser goes back to the full original URL.
+
+Do not go back to `/oauth2/auth` with a Traefik `errors` middleware. `/oauth2/auth` returns `401`, and the `errors` middleware keeps that `401` status, so the browser shows a blank "Found" page and does not follow the redirect. Its `{url}` placeholder also gives only the path, so after login the browser stays on the oauth2-proxy host ([DEVSECOPS-200](https://raulstechtips.atlassian.net/browse/DEVSECOPS-200)).
 
 ## Weekly Cloudflare IP ranges
 
@@ -75,7 +85,6 @@ One-time repository setting: **Settings > Actions > General > Workflow permissio
 - The live Argo Application tracks 13 resources and no CRDs. The new Application keeps CRDs outside Argo ownership with `helm.skipCrds: true`.
 - Cluster routes normally reference `default/default-headers`, `default/strict-referrer`, and `default/oauth-*`. The wrapper therefore manages the shared set in `default`, not `traefik`.
 - The `default/default-headers` live CSP matches the operator's current working copy. The older `traefik/default-headers` CSP does not. Adoption keeps the live `default` policy.
-- The live `default/oauth-verify` uses `/oauth2/auth`. The `traefik/oauth-verify` copy and the old manifest omit that path. Adoption keeps the live object used by routes.
 - The old Application tracks six `traefik/*` Middleware copies (`default-headers`, `strict-referrer`, `oauth-verify`, `oauth-signin`, `oauth-chain`, `vpn-ip-acl`). No route uses them (checked 2026-11-06), so the wrapper does not render them. On the first sync, Argo CD shows these six objects as requiring pruning. Prune them.
 - The chart has no `vpn-ip-acl`. oauth2-proxy replaced it. A route that needs an IP limit gets its own `ipAllowList` (inline in `externalServices[].middlewares`, or in the app chart).
 - The external resources are currently hand-applied and untracked. Adoption adds them to this chart because the operator's working copy already shows that intent.

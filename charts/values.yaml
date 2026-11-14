@@ -21,12 +21,9 @@ middlewares:
   strictReferrer:
     referrerPolicy: strict-origin-when-cross-origin
   oauth:
-    verifyAddress: http://oauth2-proxy.oauth2-proxy.svc.cluster.local/oauth2/auth
-    signIn:
-      serviceName: oauth2-proxy
-      serviceNamespace: oauth2-proxy
-      servicePort: 80
-      query: /oauth2/sign_in?rd={url}
+    # The root path, not /oauth2/auth: oauth2-proxy then answers an unauthenticated
+    # request with a 302 to Keycloak that keeps the full original URL.
+    verifyAddress: http://oauth2-proxy.oauth2-proxy.svc.cluster.local/
 
 # External endpoints represented by a Service, optional Endpoints, and an IngressRoute.
 # middlewares[] is the ordered route list. An item with spec also creates that Middleware in the entry namespace.

@@ -48,23 +48,6 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: oauth-signin
-  namespace: {{ $namespace }}
-  labels:
-    {{- include "traefik-wrapper.labels" . | nindent 4 }}
-spec:
-  errors:
-    status:
-      - "401-403"
-    service:
-      name: {{ .Values.middlewares.oauth.signIn.serviceName }}
-      namespace: {{ .Values.middlewares.oauth.signIn.serviceNamespace }}
-      port: {{ .Values.middlewares.oauth.signIn.servicePort }}
-    query: {{ .Values.middlewares.oauth.signIn.query | quote }}
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
   name: oauth-chain
   namespace: {{ $namespace }}
   labels:
@@ -72,8 +55,6 @@ metadata:
 spec:
   chain:
     middlewares:
-      - name: oauth-signin
-        namespace: {{ $namespace }}
       - name: oauth-verify
         namespace: {{ $namespace }}
 {{- end }}
